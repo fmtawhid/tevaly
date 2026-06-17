@@ -42,8 +42,8 @@
         <!-- Page Header -->
         <div class="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 sm:px-6 lg:px-8 py-6">
             <div class="max-w-7xl mx-auto">
-                <h2 class="text-3xl font-bold">My Binary Tree</h2>
-                <p class="text-blue-100 mt-2">View your complete MLM network structure</p>
+                <h2 class="text-3xl font-bold">My Network Tree</h2>
+                <p class="text-blue-100 mt-2">View your complete MLM network structure with visual hierarchy</p>
             </div>
         </div>
 
@@ -74,37 +74,191 @@
                 <div class="bg-white rounded-lg shadow-md p-8 mb-8">
                     <h3 class="text-lg font-bold text-gray-800 mb-6">🌳 Your Network Structure</h3>
                     
-                    <!-- Compact Tree -->
-                    <div class="bg-gray-900 rounded-lg p-6 font-mono text-sm text-green-400 overflow-x-auto max-h-96">
-                        <pre>@php
-function renderFullTree($user, $prefix = '', $isLast = true) {
-    $output = '';
-    $children = $user->children()->get();
-    
-    if ($prefix === '') {
-        $output .= '● ' . $user->name . "\n";
-    }
-    
-    foreach ($children as $index => $child) {
-        $isLastChild = ($index === count($children) - 1);
-        $connector = $isLastChild ? '└── ' : '├── ';
-        $extension = $isLastChild ? '    ' : '│   ';
-        
-        $icon = $child->position === 'left' ? '◀' : '▶';
-        $output .= $prefix . $connector . '● ' . $child->name . ' ' . $icon . "\n";
-        
-        if ($child->children()->count() > 0) {
-            $output .= renderFullTree($child, $prefix . $extension, $isLastChild);
-        }
-    }
-    
-    return $output;
-}
+                    <!-- Hierarchical Tree Diagram -->
+                    <style>
+                        .tree-container {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 2rem;
+                            overflow-x: auto;
+                            padding: 2rem;
+                            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                            border-radius: 8px;
+                        }
 
-echo renderFullTree(Auth::user());
-@endphp
-                        </pre>
+                        .tree-node {
+                            position: relative;
+                        }
+
+                        .tree-root {
+                            margin-bottom: 2rem;
+                        }
+
+                        .node-card {
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 1rem 1.5rem;
+                            border-radius: 8px;
+                            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                            min-width: 200px;
+                            text-align: center;
+                            border: 2px solid rgba(255, 255, 255, 0.3);
+                            transition: all 0.3s ease;
+                        }
+
+                        .node-card:hover {
+                            transform: translateY(-5px);
+                            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+                        }
+
+                        .node-card.child {
+                            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                        }
+
+                        .node-name {
+                            font-weight: bold;
+                            font-size: 1.1rem;
+                            margin-bottom: 0.5rem;
+                        }
+
+                        .node-info {
+                            font-size: 0.85rem;
+                            opacity: 0.9;
+                        }
+
+                        .tree-branch {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 1.5rem;
+                        }
+
+                        .tree-children {
+                            display: flex;
+                            justify-content: center;
+                            gap: 3rem;
+                            flex-wrap: wrap;
+                            position: relative;
+                            padding-top: 2rem;
+                        }
+
+                        .tree-children::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            left: 50%;
+                            right: 50%;
+                            height: 2rem;
+                            border-left: 2px solid #667eea;
+                            transform: translateX(-50%);
+                        }
+
+                        .tree-child-wrapper {
+                            position: relative;
+                            flex: 0 0 auto;
+                        }
+
+                        .tree-child-wrapper::before {
+                            content: '';
+                            position: absolute;
+                            top: -2rem;
+                            left: 50%;
+                            width: 2px;
+                            height: 2rem;
+                            background: #667eea;
+                            transform: translateX(-50%);
+                        }
+
+                        .tree-child-wrapper:not(:last-child)::after {
+                            content: '';
+                            position: absolute;
+                            top: -2rem;
+                            left: 0;
+                            right: 100%;
+                            height: 2px;
+                            background: #667eea;
+                        }
+
+                        .tree-level {
+                            margin-top: 2rem;
+                        }
+
+                        @media (max-width: 768px) {
+                            .tree-children {
+                                gap: 1.5rem;
+                            }
+
+                            .node-card {
+                                min-width: 160px;
+                                padding: 0.75rem 1rem;
+                                font-size: 0.9rem;
+                            }
+                        }
+                    </style>
+
+                    <div class="tree-container">
+                        <!-- Root User -->
+                        <div class="tree-node tree-root">
+                            <div class="node-card">
+                                <div class="node-name">👤 {{ Auth::user()->name }}</div>
+                                <div class="node-info">{{ Auth::user()->referral_code }}</div>
+                                <div class="node-info text-xs">You</div>
+                            </div>
+                        </div>
+
+                        @php
+                            $children = Auth::user()->children()->get();
+                            $childrenCount = count($children);
+                        @endphp
+
+                        @if($childrenCount > 0)
+                            <!-- Connector to children -->
+                            <div style="width: 2px; height: 1.5rem; background: #667eea;"></div>
+
+                            <!-- Direct Children Level -->
+                            <div class="tree-children" style="@if($childrenCount == 1) justify-content: center; @endif">
+                                @forelse($children as $child)
+                                    <div class="tree-child-wrapper">
+                                        <div class="node-card child">
+                                            <div class="node-name">👤 {{ $child->name }}</div>
+                                            <div class="node-info">{{ $child->referral_code }}</div>
+                                            <div class="node-info text-xs">Children: {{ $child->children()->count() }}</div>
+                                        </div>
+
+                                        @php $grandchildren = $child->children()->get(); @endphp
+                                        @if(count($grandchildren) > 0)
+                                            <!-- Grandchildren Level -->
+                                            <div class="tree-level">
+                                                <div style="width: 2px; height: 1rem; background: #667eea; margin: 0 auto;"></div>
+                                                <div class="tree-children" style="@if(count($grandchildren) == 1) justify-content: center; @endif">
+                                                    @foreach($grandchildren as $grandchild)
+                                                        <div class="tree-child-wrapper">
+                                                            <div class="node-card child" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); min-width: 150px; padding: 0.75rem 1rem;">
+                                                                <div class="node-name" style="font-size: 0.95rem;">{{ $grandchild->name }}</div>
+                                                                <div class="node-info text-xs">{{ $grandchild->referral_code }}</div>
+                                                                @if($grandchild->children()->count() > 0)
+                                                                    <div class="node-info text-xs">↓ {{ $grandchild->children()->count() }}</div>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <p class="text-gray-500">No direct members yet</p>
+                                @endforelse
+                            </div>
+                        @else
+                            <div class="text-center py-8">
+                                <p class="text-gray-500 text-lg">📭 No direct members in your tree yet</p>
+                                <p class="text-gray-400 text-sm mt-2">Share your referral code to build your network!</p>
+                            </div>
+                        @endif
                     </div>
+                </div>
 
                     <!-- Tree Stats -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">

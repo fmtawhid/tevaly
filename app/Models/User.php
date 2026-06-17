@@ -21,7 +21,6 @@ class User extends Authenticatable
         'referral_code',
         'sponsor_id',
         'parent_id',
-        'position',
         'role',
     ];
 
@@ -45,7 +44,7 @@ class User extends Authenticatable
         return $this->belongsTo(User::class, 'parent_id');
     }
 
-    // এই ইউজারের ঠিক নিচে যারা বসেছে (Max 2 for Binary - Left & Right)
+    // এই ইউজারের ঠিক নিচে যারা বসেছে (Direct children in normal tree structure)
     public function children()
     {
         return $this->hasMany(User::class, 'parent_id');
@@ -76,7 +75,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Get direct referrals (left & right children).
+     * Get direct referrals (direct children in normal tree).
      */
     public function getDirectReferrals()
     {

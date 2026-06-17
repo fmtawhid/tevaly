@@ -36,20 +36,8 @@ class RegisteredUserController extends Controller
             'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', 'min:8'],
             'referral_code' => ['required', 'string', 'exists:users,referral_code'],
-            'placement_id' => ['required', 'integer', 'exists:users,id'],
-            'position' => ['required', 'in:left,right'],
+            'placement_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
-
-        // Verify position is vacant under placement parent
-        $positionTaken = User::where('parent_id', $request->placement_id)
-            ->where('position', $request->position)
-            ->exists();
-
-        if ($positionTaken) {
-            return back()->withErrors([
-                'position' => 'This position is already taken. Please choose another position or parent.',
-            ]);
-        }
 
         // Get sponsor
         try {
@@ -57,6 +45,18 @@ class RegisteredUserController extends Controller
         } catch (ModelNotFoundException) {
             return back()->withErrors([
                 'referral_code' => 'Invalid referral code.',
+            ]);
+        }
+
+        // Use sponsor ID if placement_id is not provided
+        $parentId = $request->placement_id ?: $sponsor->id;
+
+        // Verify parent exists
+        try {
+            User::findOrFail($parentId);
+        } catch (ModelNotFoundException) {
+            return back()->withErrors([
+                'placement_id' => 'Invalid placement user.',
             ]);
         }
 
@@ -68,8 +68,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
             'referral_code' => 'TVL' . Str::upper(Str::random(8)),
             'sponsor_id' => $sponsor->id,
-            'parent_id' => $request->placement_id,
-            'position' => $request->position,
+            'parent_id' => $parentId,
             'role' => 'user',
         ]);
 
@@ -77,5 +76,37 @@ class RegisteredUserController extends Controller
         Auth::login($user);
 
         return redirect(route('dashboard', absolute: false));
+    }
+
+    /**
+     * Get available placement users for a given referral code
+     */
+    public function getPlacementUsers(Request $request)
+    {
+        $referralCode = $request->query('referral_code');
+        
+        if (!$referralCode) {
+            return response()->json(['error' => 'Referral code required'], 400);
+        }
+
+        try {
+            $sponsor = User::where('referral_code', $referralCode)->firstOrFail();
+        } catch (ModelNotFoundException) {
+            return response()->json(['error' => 'Invalid referral code'], 404);
+        }
+
+        // Get all downline users of the sponsor
+        $downlineUsers = $sponsor->getDownlineUsers();
+
+        // Format the users for the dropdown
+        $users = $downlineUsers->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'downline_count' => $user->countDownline(),
+            ];
+        });
+
+        return response()->json(['users' => $users->values()->all()]);
     }
 }

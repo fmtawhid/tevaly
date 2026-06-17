@@ -1,10 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\RegisteredUserController;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// API endpoint for fetching placement users
+Route::get('/api/placement-users', [RegisteredUserController::class, 'getPlacementUsers']);
 
 // Include User Routes
 require __DIR__.'/user.php';

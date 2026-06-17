@@ -33,21 +33,12 @@
 
         <!-- Placement ID -->
         <div class="mt-4">
-            <x-input-label for="placement_id" :value="__('Placement User ID (Where to place you in tree)')" />
-            <x-text-input id="placement_id" class="block mt-1 w-full" type="number" name="placement_id" :value="old('placement_id')" required />
-            <x-input-error :messages="$errors->get('placement_id')" class="mt-2" />
-            <p class="text-xs text-gray-600 mt-1">Enter the ID of the user under whom you'll be placed</p>
-        </div>
-
-        <!-- Position -->
-        <div class="mt-4">
-            <x-input-label for="position" :value="__('Position')" />
-            <select id="position" name="position" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
-                <option value="">-- Select Position --</option>
-                <option value="left" @selected(old('position') === 'left')>Left</option>
-                <option value="right" @selected(old('position') === 'right')>Right</option>
+            <x-input-label for="placement_id" :value="__('Select User (Where to place you in tree - Optional)')" />
+            <select id="placement_id" name="placement_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                <option value="">-- Auto place under sponsor --</option>
             </select>
-            <x-input-error :messages="$errors->get('position')" class="mt-2" />
+            <x-input-error :messages="$errors->get('placement_id')" class="mt-2" />
+            <p class="text-xs text-gray-600 mt-1">Leave empty to be placed directly under your sponsor</p>
         </div>
 
         <!-- Password -->
@@ -84,3 +75,58 @@
         </div>
     </form>
 </x-guest-layout>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const referralCodeInput = document.getElementById('referral_code');
+    const placementSelect = document.getElementById('placement_id');
+
+    // Load placement users when referral code changes
+    function loadPlacementUsers() {
+        const referralCode = referralCodeInput.value.trim();
+        
+        if (!referralCode) {
+            placementSelect.innerHTML = '<option value="">-- Enter referral code first --</option>';
+            return;
+        }
+
+        // Fetch available users for placement
+        fetch(`/api/placement-users?referral_code=${encodeURIComponent(referralCode)}`)
+            .then(response => response.json())
+            .then(data => {
+                placementSelect.innerHTML = '';
+                
+                // Always add the "Auto place under sponsor" option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '-- Auto place under sponsor --';
+                placementSelect.appendChild(defaultOption);
+                
+                if (data.users && data.users.length > 0) {
+                    data.users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = `${user.name} (ID: ${user.id}) - Children: ${user.downline_count}`;
+                        if (user.id == "{{ old('placement_id') }}") {
+                            option.selected = true;
+                        }
+                        placementSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                placementSelect.innerHTML = '<option value="">-- Auto place under sponsor --</option>';
+            });
+    }
+
+    // Load users on page load if referral code has a value
+    if (referralCodeInput.value) {
+        loadPlacementUsers();
+    }
+
+    // Load users when referral code changes
+    referralCodeInput.addEventListener('change', loadPlacementUsers);
+    referralCodeInput.addEventListener('input', loadPlacementUsers);
+});
+</script>
